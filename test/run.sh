@@ -93,7 +93,7 @@ run() {
       bash "$SCRIPT" 2>&1 )" && CODE=0 || CODE=$?
 }
 sent_count() { head -1 "$WORK/log" | jq '.sourceIds | length'; }
-sent_field() { head -1 "$WORK/log" | jq -c "$1"; }
+sent_field() { if [[ "$1" == -r ]]; then head -1 "$WORK/log" | jq -r "$2"; else head -1 "$WORK/log" | jq -c "$1"; fi; }
 
 expect() {
   local name="$1" want_code="$2" want_text="$3"
@@ -163,6 +163,19 @@ if [[ "$(sent_field .minimumStatus)" == '"approved"' ]]; then pass "minimumStatu
 
 run "$LINEAR" LEED_OIDC_TOKEN=t LEED_SOURCE_IDS=aaa
 if [[ "$(sent_field .confirm)" == "false" ]]; then pass "a dry run is the default"; else fail "dry run default" "body: $(head -1 "$WORK/log")"; fi
+
+run "$LINEAR" LEED_OIDC_TOKEN=t LEED_SOURCE_IDS=aaa
+if [[ "$(sent_field .publishedAt)" == '"2030-01-01T00:00:00Z"' ]]; then pass "publish-at is sent as given"; else fail "publish-at as given" "body: $(head -1 "$WORK/log")"; fi
+
+# The same GNU-then-BSD date the script uses, so the bounds are computed the way the script computes.
+iso_in() { local t=$(( $(date -u +%s) + $1 )); date -u -d "@$t" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -r "$t" +%Y-%m-%dT%H:%M:%SZ; }
+low="$(iso_in 900)"
+run "$LINEAR" LEED_OIDC_TOKEN=t LEED_SOURCE_IDS=aaa LEED_PUBLISH_AT=
+high="$(iso_in 900)"
+sent_at="$(sent_field -r .publishedAt)"
+# Same fixed-width UTC format on both sides, so string order is time order.
+if [[ ! "$sent_at" < "$low" && ! "$sent_at" > "$high" ]]; then pass "an empty publish-at defaults to 15 minutes after the job starts"; else fail "publish-at default" "sent $sent_at, expected $low..$high"; fi
+expect "  ...and says so in the log" 0 "publishing 15 minutes from now, at ${sent_at}"
 
 echo "responses"
 run "$LINEAR" LEED_OIDC_TOKEN=t LEED_SOURCE_IDS=aaa LEED_DRY_RUN=false STUB_MODE=drain

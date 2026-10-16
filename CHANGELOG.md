@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.0
+
+- `publish-at` is now optional. Left unset, the release publishes 15 minutes after the job
+  starts. Leed builds pages a few minutes ahead of their publish time and schedules them one at a
+  time, so a time only a few minutes away could let the first pages publish separately from the
+  rest of the release.
+
 ## v1.0.2
 
 - Shortened the action's description to fit GitHub Marketplace's 125-character limit. No change in behaviour.

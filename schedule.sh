@@ -8,7 +8,7 @@
 set -euo pipefail
 
 : "${LEED_AUDIENCE:?audience is required}"
-: "${LEED_PUBLISH_AT:?publish-at is required}"
+LEED_PUBLISH_AT="${LEED_PUBLISH_AT:-}"
 LEED_UNTIL="${LEED_UNTIL:-HEAD}"
 LEED_SINCE="${LEED_SINCE:-}"
 # An explicit list, if the caller has one. Whitespace- or comma-separated, so a newline-delimited
@@ -62,6 +62,18 @@ read_lines_into_shas() {
 die() { echo "${ERR}$*" >&2; exit 1; }
 note() { echo "$*"; }
 mask() { if [ "${GITHUB_ACTIONS:-}" = "true" ]; then echo "::add-mask::$1"; fi; }
+
+# With no publish-at, publish 15 minutes after this job starts. Leed starts building pages a few
+# minutes before their publish time, and scheduling goes one page at a time, so a time closer than
+# this can let publishing begin while the release is still being scheduled — the early pages then
+# go out in one publish and the rest in another. GNU date (Linux, Git Bash, BusyBox) takes `-d @N`;
+# BSD date (macOS) takes `-r N`.
+if [ -z "$LEED_PUBLISH_AT" ]; then
+  publish_epoch=$(( $(date -u +%s) + 900 ))
+  LEED_PUBLISH_AT="$(date -u -d "@$publish_epoch" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+    || date -u -r "$publish_epoch" +%Y-%m-%dT%H:%M:%SZ)"
+  note "No publish-at given; publishing 15 minutes from now, at ${LEED_PUBLISH_AT}."
+fi
 
 # ---------------------------------------------------------------------------
 # Preconditions, checked in the order that produces the most useful message.

@@ -18,8 +18,12 @@ inputs:
       Not a secret — it identifies the trust, it does not authenticate anything.
     required: true
   publish-at:
-    description: "When the matched pages should publish, ISO 8601. Must be in the future."
-    required: true
+    description: >-
+      When the matched pages should publish, ISO 8601. Must be in the future. Defaults to 15
+      minutes after the job starts, which leaves room for the whole release to be scheduled before
+      Leed starts publishing it.
+    required: false
+    default: ""
   since:
     description: >-
       The commit or ref the release starts AFTER. **Usually leave this unset** — on a tag build

@@ -62,7 +62,7 @@ value another customer can pick too, and GitHub's issuer is identical for everyo
 | Input | Required | Default | |
 |---|---|---|---|
 | `audience` | yes | | The audience Leed generated for your trust. Matched byte-for-byte. Not a secret. |
-| `publish-at` | yes | | ISO 8601. Must be in the future. |
+| `publish-at` | no | *15 minutes after the job starts* | ISO 8601. Must be in the future. See below before setting a time close to now. |
 | `since` | no | *(auto)* | Override the auto-detected start point. |
 | `tag-pattern` | no | `*` | Which tags count as releases, e.g. `v*`. Tag builds only. |
 | `merge-commit` | no | | A merge commit whose `^1..^2` is the release. See below. |
@@ -203,6 +203,11 @@ action has no build step and nothing to age out. The one footgun `getIDToken` wo
 
 - A **dry run always runs first**, on every chunk, in both modes.
 - Releases with more than 1000 commits are **split across calls**, all sharing one `publish-at`.
+- **Leave `publish-at` unset unless you need a specific time.** Leed starts building pages a few
+  minutes before their publish time, and scheduling goes one page at a time, so a time only a few
+  minutes away can let publishing begin while the release is still being scheduled; the early
+  pages then go out separately from the rest. The default, 15 minutes after the job starts, leaves
+  room for releases of several hundred pages.
 - Leed caps pages per call and reports `remaining`; the action **repeats the confirmed request
   until the remainder is drained**. A page that can never be scheduled (a PUBLISHED one needing a
   revise, say) still consumes a slot, so the action stops with an explanatory error rather than
