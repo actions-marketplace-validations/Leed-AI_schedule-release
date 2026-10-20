@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-      - uses: Leed-AI/schedule-release@v1
+      - uses: leed-ai/schedule-release@v1
         with:
           audience: leed-cms:3f2a9c14-8b7e-4d61-9a03-1c5e77b2d840
           publish-at: "2026-10-01T09:00:00Z"
@@ -62,7 +62,7 @@ value another customer can pick too, and GitHub's issuer is identical for everyo
 | Input | Required | Default | |
 |---|---|---|---|
 | `audience` | yes | | The audience Leed generated for your trust. Matched byte-for-byte. Not a secret. |
-| `publish-at` | no | *15 minutes after the job starts* | ISO 8601. Must be in the future. See below before setting a time close to now. |
+| `publish-at` | no | *15 minutes after the job starts* | ISO 8601. A time already past is accepted, and those pages publish on Leed's next publish run. See below before setting a time close to now. |
 | `since` | no | *(auto)* | Override the auto-detected start point. |
 | `tag-pattern` | no | `*` | Which tags count as releases, e.g. `v*`. Tag builds only. |
 | `merge-commit` | no | | A merge commit whose `^1..^2` is the release. See below. |
@@ -124,7 +124,7 @@ on:
       merge: { description: "Merge commit to release", required: true }
 
 # ...
-      - uses: Leed-AI/schedule-release@v1
+      - uses: leed-ai/schedule-release@v1
         with:
           audience: leed-cms:3f2a9c14-…
           merge-commit: ${{ inputs.merge }}
@@ -144,7 +144,7 @@ over directly and skip the range entirely:
       - id: release
         run: echo "ids=$(my-release-tool --commits)" >> "$GITHUB_OUTPUT"
 
-      - uses: Leed-AI/schedule-release@v1
+      - uses: leed-ai/schedule-release@v1
         with:
           audience: leed-cms:3f2a9c14-…
           source-ids: ${{ steps.release.outputs.ids }}
@@ -212,8 +212,7 @@ action has no build step and nothing to age out. The one footgun `getIDToken` wo
   until the remainder is drained**. A page that can never be scheduled (a PUBLISHED one needing a
   revise, say) still consumes a slot, so the action stops with an explanatory error rather than
   looping when a call makes no progress.
-- Per-page failures are printed with their reasons and **fail the job** — a partial release is
-  not a success.
+- Per-page failures (a page below the trust's minimum status, a page type the trust doesn't grant, a missing required field) are printed with their reasons, one ✗ line per page, and **do not fail the job**: the rest of the release is still scheduled, so read the ✗ lines. The job fails when Leed refuses the request itself (HTTP 401, 402 or 403, with the likely cause printed), when a confirmed call schedules nothing while pages remain, or when `fail-on-unmatched` is set and a commit in the range matched no page.
 
 ## Releasing a new version (maintainers)
 
